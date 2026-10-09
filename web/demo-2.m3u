@@ -1,0 +1,7 @@
+#EXTM3U
+#EXTINF:-1 group-title="Apple Test HLS",Apple BipBop 4:3
+https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8
+#EXTINF:-1 group-title="Apple Test HLS",Apple BipBop Advanced
+https://tungsten.aaplimg.com/VOD/bipbop_adv_example_v2/master.m3u8
+#EXTINF:-1 group-title="Apple Test HLS",Apple BipBop fMP4
+https://tungsten.aaplimg.com/VOD/bipbop_adv_fmp4_example/master.m3u8
