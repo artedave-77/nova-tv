@@ -48,7 +48,7 @@ if(mobileMenu&&mobileNavigation){
  document.addEventListener('click',e=>{if(!mobileMenu.contains(e.target)&&!mobileNavigation.contains(e.target))closeMobileMenu()});
 }
 
-$('#hero-action').onclick=()=>tab(channels.length?'live':'settings');$('#back-live').onclick=()=>{ $('#player').pause();tab('live')};
+$('#back-live').onclick=()=>{ $('#player').pause();tab('live')};
 function parseM3U(text){let name='',group='Generale',logo='',out=[];for(const raw of text.split(/\r?\n/)){const line=raw.trim();if(line.startsWith('#EXTINF:')){name=line.split(',').slice(1).join(',').trim()||'Canale';group=(line.match(/group-title="([^"]*)"/)||[])[1]||'Generale';logo=(line.match(/tvg-logo="([^"]*)"/)||[])[1]||'';}else if(line&&!line.startsWith('#')){try{const url=new URL(line);if(['https:','http:'].includes(url.protocol))out.push({name:name||'Canale',url:url.href,group,logo})}catch{}name='';group='Generale';logo=''}}return out}
 function isFav(c){return favorites.includes(c.url)}
 function toggleFav(c){favorites=isFav(c)?favorites.filter(x=>x!==c.url):[...favorites,c.url];localStorage.setItem('nova-favorites',JSON.stringify(favorites));renderAll()}
@@ -104,3 +104,26 @@ async function restoreNovaBackup(file){
 }
 $('#export-backup').onclick=exportNovaBackup;
 $('#import-backup').onchange=e=>restoreNovaBackup(e.target.files?.[0]);
+
+/* NOVA TV 4.4 — verifica aggiornamenti all'apertura e al ritorno in primo piano. */
+const NOVA_BUILD='4.4.0';
+let novaLastVersionCheck=0;
+async function checkNovaUpdates(){
+ const now=Date.now();
+ if(now-novaLastVersionCheck<60000||document.visibilityState==='hidden')return;
+ novaLastVersionCheck=now;
+ try{
+  const response=await fetch(new URL('version.json?check='+now,location.href),{cache:'no-store'});
+  if(!response.ok)return;
+  const release=await response.json();
+  if(typeof release.version!=='string'||!/^[0-9]+(?:\.[0-9]+){2}$/.test(release.version))return;
+  if(release.version===NOVA_BUILD)return;
+  const destination=new URL(location.href);
+  if(destination.searchParams.get('nova_version')===release.version)return;
+  destination.searchParams.set('nova_version',release.version);
+  location.replace(destination.href);
+ }catch{/* Nessuna connessione: continua ad usare la versione disponibile. */}
+}
+window.addEventListener('pageshow',()=>checkNovaUpdates());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNovaUpdates()});
+window.addEventListener('focus',()=>checkNovaUpdates());
