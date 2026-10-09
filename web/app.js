@@ -38,6 +38,16 @@ function renderHistory(){const items=history.map(h=>channels.find(c=>c.url===h.u
 $('#clear-history').onclick=()=>{history=[];try{localStorage.removeItem(historyKey)}catch{}renderHistory()};
 function tab(name){currentTab=name;for(const id of ['home','live','national','art','travel','apps','favorites','settings','watch','detail'])$('#'+id).classList.toggle('hidden',id!==name);document.querySelectorAll('.nav[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));if(name==='favorites')renderFavorites();if(name==='live')renderChannels();window.scrollTo(0,0)}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
+const mobileMenu=document.getElementById('mobile-menu-toggle');
+const mobileNavigation=document.getElementById('main-navigation');
+if(mobileMenu&&mobileNavigation){
+ const closeMobileMenu=()=>{mobileMenu.setAttribute('aria-expanded','false');mobileMenu.setAttribute('aria-label','Apri menu');mobileNavigation.classList.remove('mobile-open')};
+ mobileMenu.addEventListener('click',()=>{const open=mobileMenu.getAttribute('aria-expanded')!=='true';mobileMenu.setAttribute('aria-expanded',String(open));mobileMenu.setAttribute('aria-label',open?'Chiudi menu':'Apri menu');mobileNavigation.classList.toggle('mobile-open',open)});
+ document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',closeMobileMenu));
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobileMenu()});
+ document.addEventListener('click',e=>{if(!mobileMenu.contains(e.target)&&!mobileNavigation.contains(e.target))closeMobileMenu()});
+}
+
 $('#hero-action').onclick=()=>tab(channels.length?'live':'settings');$('#back-live').onclick=()=>{ $('#player').pause();tab('live')};
 function parseM3U(text){let name='',group='Generale',logo='',out=[];for(const raw of text.split(/\r?\n/)){const line=raw.trim();if(line.startsWith('#EXTINF:')){name=line.split(',').slice(1).join(',').trim()||'Canale';group=(line.match(/group-title="([^"]*)"/)||[])[1]||'Generale';logo=(line.match(/tvg-logo="([^"]*)"/)||[])[1]||'';}else if(line&&!line.startsWith('#')){try{const url=new URL(line);if(['https:','http:'].includes(url.protocol))out.push({name:name||'Canale',url:url.href,group,logo})}catch{}name='';group='Generale';logo=''}}return out}
 function isFav(c){return favorites.includes(c.url)}
