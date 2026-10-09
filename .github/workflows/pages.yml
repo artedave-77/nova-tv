@@ -25,5 +25,11 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web
+      - name: Verify Pages artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" --jq '.artifacts[] | [.name, .expired] | @tsv'
       - id: deployment
         uses: actions/deploy-pages@v4
