@@ -51,3 +51,46 @@ function renderAll(){fill($('#featured'),channels.slice(0,8),'La tua selezione a
 function watch(c){history=[{url:c.url},...history.filter(h=>h.url!==c.url)].slice(0,20);try{localStorage.setItem(historyKey,JSON.stringify(history))}catch{}renderHistory();current=c;$('#watch-title').textContent=c.name;$('#now').textContent=c.name;const player=$('#player');player.pause();player.src=c.url;player.load();tab('watch');player.play().catch(()=>{ $('#now').textContent=c.name+' · Premi Play nel lettore per avviare il video.'; });}
 async function load(urlText){let url;try{url=new URL(urlText);if(url.protocol!=='https:')throw Error('URL HTTPS richiesto')}catch{$('#status').textContent='Inserisci un URL HTTPS valido.';return}$('#load').disabled=true;$('#status').textContent='Caricamento…';try{const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);let response;try{response=await fetch(url,{signal:controller.signal})}finally{clearTimeout(timeout)}if(!response.ok)throw Error('HTTP '+response.status);const text=await response.text();if(text.length>5000000)throw Error('Playlist troppo grande');const parsed=parseM3U(text);if(!parsed.length)throw Error('Nessun canale valido');channels=parsed;const stored=storePlaylist(url.href);$('#status').textContent=channels.length+' canali importati'+(stored?' e salvati sul dispositivo.':'. Memoria locale non disponibile.');renderAll();tab('live')}catch(e){ $('#status').textContent='Importazione non riuscita: '+e.message+'. Verifica anche i permessi CORS.'}finally{$('#load').disabled=false}}
 $('#load').onclick=()=>load($('#url').value);$('#demo').onclick=()=>{$('#url').value=new URL('demo.m3u',location.href).href;load($('#url').value)};$('#italia-channels').onclick=loadItalianChannels;$('#free-channels').onclick=()=>{$('#url').value=new URL('free-channels.m3u',location.href).href;load($('#url').value)};$('#demo2').onclick=()=>{$('#url').value=new URL('demo-2.m3u',location.href).href;load($('#url').value)};$('#search').oninput=renderChannels;$('#detail-back').onclick=()=>tab('live');restorePlaylist();renderAll();
+
+function exportNovaBackup(){
+ try{
+  const backup={format:'nova-tv-backup',version:1,exportedAt:new Date().toISOString(),playlists,activePlaylist,favorites,history};
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download='nova-tv-backup.json';document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  $('#backup-status').textContent='Backup preparato. Conserva il file per ripristinarlo sul nuovo dominio.';
+ }catch(e){$('#backup-status').textContent='Esportazione non riuscita: '+e.message}
+}
+async function restoreNovaBackup(file){
+ if(!file)return;
+ const status=$('#backup-status');
+ try{
+  if(file.size>8*1024*1024)throw Error('Il file supera 8 MB');
+  const raw=await file.text();const backup=JSON.parse(raw);
+  if(backup.format!=='nova-tv-backup'||backup.version!==1||!Array.isArray(backup.playlists))throw Error('Formato backup non riconosciuto');
+  if(backup.playlists.length>75)throw Error('Troppe playlist');
+  const clean=backup.playlists.map((p,i)=>{
+   if(!p||typeof p!=='object'||!Array.isArray(p.channels))throw Error('Playlist non valida');
+   const items=p.channels.filter(ch=>ch&&typeof ch.name==='string'&&typeof ch.url==='string').slice(0,20000).map(ch=>{
+     const url=new URL(ch.url);
+     if(!['http:','https:'].includes(url.protocol))throw Error('Indirizzo non supportato');
+     return {name:ch.name.slice(0,180),url:url.href,group:typeof ch.group==='string'?ch.group.slice(0,100):'Generale',logo:typeof ch.logo==='string'&&ch.logo.startsWith('https://')?ch.logo:''};
+   });
+   return {id:typeof p.id==='string'?p.id:'restored-'+i,name:typeof p.name==='string'?p.name.slice(0,120):'Playlist '+(i+1),url:typeof p.url==='string'&&p.url.startsWith('https://')?p.url:'',channels:items};
+  });
+  const fav=Array.isArray(backup.favorites)?backup.favorites.filter(x=>typeof x==='string').slice(0,1000):[];
+  const hist=Array.isArray(backup.history)?backup.history.filter(x=>x&&typeof x.url==='string').slice(0,20).map(x=>({url:x.url})):[];
+  if(!confirm('Ripristinare il backup? Le playlist, i preferiti e la cronologia di questo indirizzo saranno sostituiti.'))return;
+  const selected=clean.find(x=>x.id===backup.activePlaylist)?.id||clean[0]?.id||'';
+  const snapshot={playlists:clean,activePlaylist:selected};
+  localStorage.setItem(libraryKey,JSON.stringify(snapshot));
+  localStorage.setItem('nova-favorites',JSON.stringify(fav));
+  localStorage.setItem(historyKey,JSON.stringify(hist));
+  playlists=clean;activePlaylist=selected;favorites=fav;history=hist;selectPlaylist(selected);
+  status.textContent='Backup ripristinato: '+clean.length+' playlist, '+fav.length+' preferiti.';
+ }catch(e){status.textContent='Impossibile ripristinare: '+e.message}
+ finally{$('#import-backup').value=''}
+}
+$('#export-backup').onclick=exportNovaBackup;
+$('#import-backup').onchange=e=>restoreNovaBackup(e.target.files?.[0]);
