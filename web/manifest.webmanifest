@@ -1,1 +1,26 @@
-{"name":"NOVA TV","short_name":"NOVA TV","start_url":"./","display":"standalone","background_color":"#101218","theme_color":"#101218","icons":[]}
+{
+  "id": "./",
+  "name": "NOVA TV",
+  "short_name": "NOVA TV",
+  "description": "La tua TV, il tuo spazio. Canali, playlist, documentari e streaming.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090a11",
+  "theme_color": "#090a11",
+  "icons": [
+    {
+      "src": "./nova-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
