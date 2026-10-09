@@ -115,7 +115,7 @@ $('#export-backup').onclick=exportNovaBackup;
 $('#import-backup').onchange=e=>restoreNovaBackup(e.target.files?.[0]);
 
 /* NOVA TV 4.4 — verifica aggiornamenti all'apertura e al ritorno in primo piano. */
-const NOVA_BUILD='4.5.1';
+const NOVA_BUILD='4.5.2';
 let novaLastVersionCheck=0;
 async function checkNovaUpdates(){
  const now=Date.now();
