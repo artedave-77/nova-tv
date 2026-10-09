@@ -4,7 +4,7 @@
   "short_name": "NOVA TV",
   "description": "La tua TV, il tuo spazio. Canali, playlist, documentari e streaming.",
   "lang": "it",
-  "start_url": "./",
+  "start_url": "./?nova_version=4.4.0",
   "scope": "./",
   "display": "standalone",
   "background_color": "#090a11",
