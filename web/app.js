@@ -94,10 +94,19 @@ async function restoreNovaBackup(file){
   if(!confirm('Ripristinare il backup? Le playlist, i preferiti e la cronologia di questo indirizzo saranno sostituiti.'))return;
   const selected=clean.find(x=>x.id===backup.activePlaylist)?.id||clean[0]?.id||'';
   const snapshot={playlists:clean,activePlaylist:selected};
-  localStorage.setItem(libraryKey,JSON.stringify(snapshot));
-  localStorage.setItem('nova-favorites',JSON.stringify(fav));
-  localStorage.setItem(historyKey,JSON.stringify(hist));
-  playlists=clean;activePlaylist=selected;favorites=fav;history=hist;selectPlaylist(selected);
+  // Il ripristino non deve lasciare dati parziali se Safari esaurisce lo spazio.
+  const backupKeys=[libraryKey,'nova-favorites',historyKey];
+  const oldValues=backupKeys.map(key=>localStorage.getItem(key));
+  const newValues=[JSON.stringify(snapshot),JSON.stringify(fav),JSON.stringify(hist)];
+  try{
+    backupKeys.forEach((key,i)=>localStorage.setItem(key,newValues[i]));
+  }catch(error){
+    backupKeys.forEach((key,i)=>{try{if(oldValues[i]===null)localStorage.removeItem(key);else localStorage.setItem(key,oldValues[i])}catch{}});
+    throw Error('Memoria insufficiente: i dati precedenti sono stati conservati quando possibile.');
+  }
+  playlists=clean;activePlaylist=selected;favorites=fav;history=hist;
+  activeGroup='Tutti';$('#url').value=clean.find(p=>p.id===selected)?.url||'';
+  renderPlaylistList();renderAll();
   status.textContent='Backup ripristinato: '+clean.length+' playlist, '+fav.length+' preferiti.';
  }catch(e){status.textContent='Impossibile ripristinare: '+e.message}
  finally{$('#import-backup').value=''}
@@ -106,7 +115,7 @@ $('#export-backup').onclick=exportNovaBackup;
 $('#import-backup').onchange=e=>restoreNovaBackup(e.target.files?.[0]);
 
 /* NOVA TV 4.4 — verifica aggiornamenti all'apertura e al ritorno in primo piano. */
-const NOVA_BUILD='4.5.0';
+const NOVA_BUILD='4.5.1';
 let novaLastVersionCheck=0;
 async function checkNovaUpdates(){
  const now=Date.now();
@@ -117,7 +126,10 @@ async function checkNovaUpdates(){
   if(!response.ok)return;
   const release=await response.json();
   if(typeof release.version!=='string'||!/^[0-9]+(?:\.[0-9]+){2}$/.test(release.version))return;
-  if(release.version===NOVA_BUILD)return;
+  const releaseParts=release.version.split('.').map(Number);
+  const buildParts=NOVA_BUILD.split('.').map(Number);
+  const newer=releaseParts.some((part,i)=>part>buildParts[i]&&releaseParts.slice(0,i).every((value,j)=>value===buildParts[j]));
+  if(!newer)return;
   const destination=new URL(location.href);
   if(destination.searchParams.get('nova_version')===release.version)return;
   destination.searchParams.set('nova_version',release.version);
@@ -127,6 +139,8 @@ async function checkNovaUpdates(){
 window.addEventListener('pageshow',()=>checkNovaUpdates());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNovaUpdates()});
 window.addEventListener('focus',()=>checkNovaUpdates());
+// Quando NOVA TV resta aperta a lungo, controlla gli aggiornamenti ogni cinque minuti.
+setInterval(()=>{if(document.visibilityState==='visible')checkNovaUpdates()},300000);
 
 /* NOVA TV 4.5 — Installazione su iOS, Android e desktop. */
 let novaInstallPrompt=null;
