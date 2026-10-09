@@ -106,7 +106,7 @@ $('#export-backup').onclick=exportNovaBackup;
 $('#import-backup').onchange=e=>restoreNovaBackup(e.target.files?.[0]);
 
 /* NOVA TV 4.4 — verifica aggiornamenti all'apertura e al ritorno in primo piano. */
-const NOVA_BUILD='4.4.0';
+const NOVA_BUILD='4.5.0';
 let novaLastVersionCheck=0;
 async function checkNovaUpdates(){
  const now=Date.now();
@@ -127,3 +127,42 @@ async function checkNovaUpdates(){
 window.addEventListener('pageshow',()=>checkNovaUpdates());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNovaUpdates()});
 window.addEventListener('focus',()=>checkNovaUpdates());
+
+/* NOVA TV 4.5 — Installazione su iOS, Android e desktop. */
+let novaInstallPrompt=null;
+const novaInstallEntry=document.getElementById('nova-install-entry');
+const novaInstallButton=document.getElementById('nova-install-button');
+const novaInstallOverlay=document.getElementById('nova-install-overlay');
+const novaInstallSteps=document.getElementById('nova-install-steps');
+const novaInstallClose=document.getElementById('nova-install-close');
+const novaInstallConfirm=document.getElementById('nova-install-confirm');
+const novaStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+function novaInstallVisibility(){
+ if(novaInstallEntry)novaInstallEntry.classList.toggle('hidden',novaStandalone());
+}
+function novaInstallInstructions(){
+ const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+ const isAndroid=/Android/.test(navigator.userAgent);
+ const isSafari=/Safari/.test(navigator.userAgent)&&!/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+ const isChrome=/Chrome|CriOS/.test(navigator.userAgent)&&!/Edg|OPR/.test(navigator.userAgent);
+ const steps=isIOS
+ ?(isSafari?['Tocca Condividi (il quadrato con la freccia verso l’alto) nella barra di Safari.','Scegli Aggiungi alla schermata Home.','Tocca Aggiungi, poi apri NOVA TV dalla sua icona.']:['Apri questo indirizzo direttamente in Safari.','Tocca Condividi e scegli Aggiungi alla schermata Home.','Conferma e apri NOVA TV dalla sua icona.'])
+ :isAndroid?['Apri NOVA TV in Chrome o in un browser compatibile.','Tocca il menu ⋮ e scegli Installa app oppure Aggiungi alla schermata Home.','Conferma e cerca NOVA TV tra le app.']
+ :['Apri NOVA TV in Chrome o Edge.','Cerca Installa app nella barra degli indirizzi oppure nel menu del browser.','Conferma per aggiungere NOVA TV al tuo dispositivo.'];
+ novaInstallSteps.replaceChildren();
+ steps.forEach((step,i)=>{const box=document.createElement('div');box.className='nova-install-step';const n=document.createElement('b');n.textContent=String(i+1);const label=document.createElement('span');label.textContent=step;box.append(n,label);novaInstallSteps.append(box)});
+}
+function novaCloseInstall(){novaInstallOverlay.classList.add('hidden');document.body.style.overflow='';novaInstallButton?.focus()}
+function novaOpenInstall(){novaInstallInstructions();novaInstallOverlay.classList.remove('hidden');document.body.style.overflow='hidden';novaInstallClose.focus()}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();novaInstallPrompt=e;novaInstallVisibility()});
+window.addEventListener('appinstalled',()=>{novaInstallPrompt=null;novaInstallVisibility();novaCloseInstall()});
+if(novaInstallButton)novaInstallButton.addEventListener('click',async()=>{
+ if(novaStandalone())return;
+ if(novaInstallPrompt){const prompt=novaInstallPrompt;novaInstallPrompt=null;try{await prompt.prompt();await prompt.userChoice}catch{novaOpenInstall()}return}
+ novaOpenInstall();
+});
+novaInstallClose?.addEventListener('click',novaCloseInstall);
+novaInstallConfirm?.addEventListener('click',novaCloseInstall);
+novaInstallOverlay?.addEventListener('click',e=>{if(e.target===novaInstallOverlay)novaCloseInstall()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!novaInstallOverlay?.classList.contains('hidden'))novaCloseInstall()});
+novaInstallVisibility();
