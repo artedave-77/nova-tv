@@ -1,0 +1,16 @@
+name: NovaTV
+options:
+  bundleIdPrefix: com.novatv
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  NovaTV:
+    type: application
+    platform: iOS
+    sources: [NovaTV]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.novatv.player
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        SWIFT_VERSION: 5.9
